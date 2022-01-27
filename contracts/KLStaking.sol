@@ -300,4 +300,13 @@ contract KLStaking is ReentrancyGuard {
     function getOrderInfo(uint256 id) public view returns (Order memory order) {
         order = _stakeOrders[id];
     }
+
+    // 获取一批订单的总金额
+    function getOrderAmount(uint256[] memory ids) public view returns (uint256) {
+        uint256 amount = 0;
+        for(uint i=0;i<ids.length;i++){
+            amount = amount.add(_stakeOrders[ids[i]].amount);
+        }
+        return amount;
+    }
 }
