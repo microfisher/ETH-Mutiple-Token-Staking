@@ -54,7 +54,7 @@ contract KLStaking is ReentrancyGuard {
     event OnDeposit(address indexed sender, address indexed token, uint256 indexed id, uint256 time, uint256 staked, uint256 issued);
 
     // 提款事件
-    event OnWithdraw(address indexed sender, address indexed token, uint256 indexed id, uint256 time, uint256 burned, uint256 returned);
+    event OnWithdraw(address indexed sender, address indexed token, uint256[] ids, uint256 time, uint256 burned, uint256 returned);
 
     // 转移事件
     event OnTransfer(address indexed sender, address indexed token, uint256[] ids, uint256 time, uint256 amount);
@@ -130,21 +130,28 @@ contract KLStaking is ReentrancyGuard {
     }
 
     // 提取代币并销毁锚定币（用户操作）
-    function withdraw(string memory name, uint256 id) public nonReentrant {
+    function withdraw(string memory name, uint256[] memory ids) public nonReentrant {
 
         require(_settings.locked==false, "The system is currently under maintenance");
 
         // 判断代币存在
         Token memory token = _tokens[name];
-        Order storage order = _stakeOrders[id];
         require(token.numerator>=1, "The token does not exists");
-        require(_stakeUsers[id] == msg.sender, "Invalid owner");
-        require(order.token == address(token.input), "Invalid token");
-        require(order.amount > 0, "Invalid amount");
-        require(order.status == 0 || order.status == 2, "You cannot withdraw tokens right now");// 0:deposit 2:unstaked 状态才能提现
+
+        // 批量验证提现
+        uint256 amount = 0;
+        for(uint i=0;i<ids.length;i++){
+            uint id = ids[i];
+            require(_stakeUsers[id] == msg.sender, "Invalid owner");
+            require(_stakeOrders[id].token == address(token.input), "Invalid token");
+            require(_stakeOrders[id].amount > 0, "Invalid amount");
+            require(_stakeOrders[id].status == 0 || _stakeOrders[id].status == 2, "You cannot withdraw tokens right now");// 0:deposit 2:unstaked 状态才能提现
+            amount = amount.add(_stakeOrders[id].amount);
+            delete _stakeOrders[id];
+            delete _stakeUsers[id];
+        }
 
         // 验证质押数量（地址为0则认为退还ETH代币，反之则认为退还ERC20代币）
-        uint256 amount = order.amount;
         bool isEthToken = address(token.input) == address(0);
         if(isEthToken){
             uint balance = address(this).balance;
@@ -158,9 +165,6 @@ contract KLStaking is ReentrancyGuard {
         uint256 burned = amount.div(token.denominator).mul(token.numerator);
         token.output.safeTransferFrom(msg.sender, address(this), burned); 
 
-        delete _stakeOrders[id];
-        delete _stakeUsers[id];
-
         // 销毁锚定币
         token.output.burn(address(this), amount);
 
@@ -172,7 +176,7 @@ contract KLStaking is ReentrancyGuard {
             token.input.safeTransfer(msg.sender,amount);
         }
 
-        emit OnWithdraw(msg.sender, address(token.input), id, block.timestamp, burned, amount);
+        emit OnWithdraw(msg.sender, address(token.input), ids, block.timestamp, burned, amount);
     }
 
     // 系统转移质押代币并创建节点（系统服务操作）
