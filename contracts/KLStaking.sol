@@ -27,6 +27,7 @@ contract KLStaking is ReentrancyGuard {
     // 质押订单
     struct Order {
         uint8 status;       // 质押状态（ 0: deposit  1: staked  2: unstaked  3: withdrawal  4: staking  5: unstaking ）
+        address token;      // 存款合约
         uint256 amount;     // 质押数量
     }
 
@@ -61,17 +62,17 @@ contract KLStaking is ReentrancyGuard {
     // 更新订单事件
     event OnUnstake(address indexed sender, address indexed token, uint256[] ids, uint256 time, uint256 amount);
 
-    // 修改代币事件
-    event OnChangeToken(string indexed name, address indexed input, address indexed output, bool multiple, uint32 numerator, uint32 denominator, uint256 minimum, uint256 maximum);
+    // 设置代币事件
+    event OnTokenChange(string indexed name, address indexed input, address indexed output, bool multiple, uint32 numerator, uint32 denominator, uint256 minimum, uint256 maximum);
 
     // 移除代币事件
-    event OnRemoveToken(string indexed name);
+    event OnTokenRemove(string indexed name);
 
     // 系统设置事件
-    event OnChangeSetting(bool locked, address server, address manager, address funds);
+    event OnSettingChange(bool locked, address server, address manager, address funds);
 
     // 锁定事件
-    event OnChangeLock(bool locked);
+    event OnLockChange(bool locked);
 
 
     constructor(address funds, address server, address manager){
@@ -111,7 +112,7 @@ contract KLStaking is ReentrancyGuard {
         for(uint i=0;i<count;i++){
             _identity = _identity.add(1);
             _stakeUsers[_identity] = msg.sender;
-            _stakeOrders[_identity] = Order(0,amount);
+            _stakeOrders[_identity] = Order(0,address(token.input),amount);
             emit OnDeposit(msg.sender, address(token.input), _identity, block.timestamp, token.maximum, token.maximum.div(token.denominator).mul(token.numerator));
         }
 
@@ -119,7 +120,7 @@ contract KLStaking is ReentrancyGuard {
         if(remain>0){
             _identity = _identity.add(1);
             _stakeUsers[_identity] = msg.sender;
-            _stakeOrders[_identity] = Order(0,amount);
+            _stakeOrders[_identity] = Order(0,address(token.input),amount);
             emit OnDeposit(msg.sender, address(token.input), _identity, block.timestamp, remain, remain.div(token.denominator).mul(token.numerator));
         }
         
@@ -138,6 +139,7 @@ contract KLStaking is ReentrancyGuard {
         Order storage order = _stakeOrders[id];
         require(token.numerator>=1, "The token does not exists");
         require(_stakeUsers[id] == msg.sender, "Invalid owner");
+        require(order.token == address(token.input), "Invalid token");
         require(order.amount > 0, "Invalid amount");
         require(order.status == 0 || order.status == 2, "You cannot withdraw tokens right now");// 0:deposit 2:unstaked 状态才能提现
 
@@ -224,7 +226,7 @@ contract KLStaking is ReentrancyGuard {
     }
 
     // 创建质押代币（管理员操作）
-    function changeToken(string memory name, bool multiple, uint32 numerator, uint32 denominator, address input, address output, uint256 minimum, uint256 maximum) public {
+    function setToken(string memory name, bool multiple, uint32 numerator, uint32 denominator, address input, address output, uint256 minimum, uint256 maximum) public {
 
         Token storage token = _tokens[name];
         require(bytes(name).length>0,"Invalid name");
@@ -243,7 +245,7 @@ contract KLStaking is ReentrancyGuard {
         token.minimum = minimum;
         token.maximum = maximum;
         
-        emit OnChangeToken(name,address(input),address(output),multiple,numerator,denominator,minimum,maximum);
+        emit OnTokenChange(name,address(input),address(output),multiple,numerator,denominator,minimum,maximum);
     }
 
     // 移除质押代币（管理员操作）
@@ -252,21 +254,21 @@ contract KLStaking is ReentrancyGuard {
         require(token.numerator>=1,"Token does not exists");
         require(_settings.manager == msg.sender,"Error manager");
         delete _tokens[name];
-        emit OnRemoveToken(name);
+        emit OnTokenRemove(name);
     }
 
     // 修改系统设置（管理员操作）
     function changeSetting(bool locked, address server, address manager, address funds) public {
         require(_settings.manager == msg.sender,"Error manager");
         _settings = Setting(locked, server, manager, funds);
-        emit OnChangeSetting(locked, server, manager, funds);
+        emit OnSettingChange(locked, server, manager, funds);
     }
 
     // 锁定系统状态（管理员操作）
     function lock() public {
         require(_settings.manager == msg.sender,"Error manager");
         _settings.locked = !_settings.locked;
-        emit OnChangeLock(_settings.locked);
+        emit OnLockChange(_settings.locked);
     }
 
     // 一键紧急提现（管理员操作）
