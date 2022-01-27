@@ -25,10 +25,10 @@ amount 质押数量 （ETH质押时可设置为0，ERC20质押时需设置具体
 5.区分ETH及ERC20转账方式，给用户提现  
 ```
 用户提现
-function withdraw(string memory name, uint256 id) public nonReentrant
+function withdraw(string memory name, uint256[] ids) public nonReentrant
   
 name 代币名称（ETH、USDT、DAI）  
-id 存款凭证ID （用户质押时生成的唯一ID，会通过事件保存至后端服务器）  
+ids 存款凭证ID列表 （用户质押时生成的唯一ID，会通过事件保存至后端服务器）  
 ```
 
 #### 三、转移并创建节点
@@ -65,7 +65,7 @@ ids 存款凭证ID数组列表 （需要转入并给用户提现的id列表，�
 5.支持兑换汇率设置  
 ```
 创建、修改代币信息（存在则更新，不存在则创建）
-function changeToken(string memory name, bool multiple, uint32 numerator, uint32 denominator, address input, address output, uint256 minimum, uint256 maximum) public
+function setToken(string memory name, bool multiple, uint32 numerator, uint32 denominator, address input, address output, uint256 minimum, uint256 maximum) public
   
 name 代币名称（ETH、USDT、DAI）  
 multiple 是否质押数量必须是节点最大质押量的倍数(默认为true)  
