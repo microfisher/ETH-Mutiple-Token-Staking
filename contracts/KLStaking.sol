@@ -112,7 +112,7 @@ contract KLStaking is ReentrancyGuard {
         for(uint i=0;i<count;i++){
             _identity = _identity.add(1);
             _stakeUsers[_identity] = msg.sender;
-            _stakeOrders[_identity] = Order(0,address(token.input),amount);
+            _stakeOrders[_identity] = Order(0,address(token.input),token.maximum);
             emit OnDeposit(msg.sender, address(token.input), _identity, block.timestamp, token.maximum, token.maximum.div(token.denominator).mul(token.numerator));
         }
 
@@ -120,7 +120,7 @@ contract KLStaking is ReentrancyGuard {
         if(remain>0){
             _identity = _identity.add(1);
             _stakeUsers[_identity] = msg.sender;
-            _stakeOrders[_identity] = Order(0,address(token.input),amount);
+            _stakeOrders[_identity] = Order(0,address(token.input),remain);
             emit OnDeposit(msg.sender, address(token.input), _identity, block.timestamp, remain, remain.div(token.denominator).mul(token.numerator));
         }
         
