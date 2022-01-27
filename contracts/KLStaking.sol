@@ -166,7 +166,7 @@ contract KLStaking is ReentrancyGuard {
         token.output.safeTransferFrom(msg.sender, address(this), burned); 
 
         // 销毁锚定币
-        token.output.burn(address(this), amount);
+        token.output.burn(address(this), burned);
 
         // 发送质押币
         if(isEthToken){
