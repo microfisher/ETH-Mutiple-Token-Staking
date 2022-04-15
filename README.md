@@ -1,5 +1,5 @@
-# ETH2.0-Staking-Service
-ETH2.0可乐质押系统，支持ETH及ERC20代币质押并生成锚定币
+# ETH-Mutiple-Token-Staking
+ETH可乐质押系统，支持ETH及ERC20代币质押并生成锚定币
 
 #### 一、用户质押
 1.防止重入漏洞  
